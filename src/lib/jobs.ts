@@ -22,6 +22,7 @@ export type JobAction =
   | { type: 'done'; id: string; attempt: number; blob: Blob; keptOriginal: boolean }
   | { type: 'fail'; id: string; attempt: number; error: string }
   | { type: 'requeue' }
+  | { type: 'retry'; id: string }
   | { type: 'remove'; id: string }
   | { type: 'clear' };
 
@@ -60,6 +61,12 @@ export function jobsReducer(state: Job[], action: JobAction): Job[] {
         keptOriginal: undefined,
         error: undefined,
       }));
+    case 'retry':
+      return state.map((j) =>
+        j.id === action.id && j.status === 'error'
+          ? { ...j, status: 'queued', attempt: j.attempt + 1, error: undefined }
+          : j,
+      );
     case 'remove':
       return state.filter((j) => j.id !== action.id);
     case 'clear':

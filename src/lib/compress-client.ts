@@ -3,7 +3,7 @@ import { MIME_BY_FORMAT, type ImageFormat, type QualityLevel } from './types';
 import type { WorkerRequest, WorkerResponse } from './worker-protocol';
 
 export interface Compressor {
-  compress(file: File, format: ImageFormat, level: QualityLevel): Promise<Blob>;
+  compress(file: File, format: ImageFormat, level: QualityLevel, shouldRun?: () => boolean): Promise<Blob>;
   dispose(): void;
 }
 
@@ -37,7 +37,7 @@ export function createCompressor(concurrency: number): Compressor {
   const idle: Worker[] = [];
 
   return {
-    compress(file, format, level) {
+    compress(file, format, level, shouldRun) {
       return enqueue(async () => {
         const worker =
           idle.pop() ??
@@ -51,7 +51,7 @@ export function createCompressor(concurrency: number): Compressor {
           worker.terminate();
           throw err;
         }
-      });
+      }, shouldRun);
     },
     dispose() {
       idle.splice(0).forEach((w) => w.terminate());

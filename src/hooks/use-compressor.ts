@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { createCompressor, type Compressor } from '@/lib/compress-client';
 import { detectConcurrency } from '@/lib/device';
+import { friendlyError } from '@/lib/errors';
 import { jobsReducer, type Job } from '@/lib/jobs';
 import { DEFAULT_QUALITY } from '@/lib/quality';
+import { TaskSkippedError } from '@/lib/queue';
 import { chooseResult } from '@/lib/savings';
 import type { QualityLevel } from '@/lib/types';
 import { acceptFiles } from '@/lib/validate';
@@ -18,6 +20,11 @@ export function useCompressor() {
   const compressorRef = useRef<Compressor | null>(null);
   const startedRef = useRef(new Set<string>());
   const idCounterRef = useRef(0);
+  const jobsRef = useRef<Job[]>([]);
+
+  useEffect(() => {
+    jobsRef.current = jobs;
+  }, [jobs]);
 
   // Lanza la compresión de cada trabajo en cola exactamente una vez por intento.
   useEffect(() => {
@@ -30,18 +37,25 @@ export function useCompressor() {
       compressorRef.current ??= createCompressor(detectConcurrency());
       dispatch({ type: 'start', id: job.id, attempt: job.attempt });
       compressorRef.current
-        .compress(job.file, job.format, levelRef.current)
+        .compress(
+          job.file,
+          job.format,
+          levelRef.current,
+          // Si el trabajo se quitó o cambió de intento, no gastar la cola en él.
+          () => jobsRef.current.some((j) => j.id === job.id && j.attempt === job.attempt),
+        )
         .then((compressed) => {
           const { blob, keptOriginal } = chooseResult(job.file, compressed);
           dispatch({ type: 'done', id: job.id, attempt: job.attempt, blob, keptOriginal });
         })
         .catch((err) => {
+          if (err instanceof TaskSkippedError) return;
           console.error(err);
           dispatch({
             type: 'fail',
             id: job.id,
             attempt: job.attempt,
-            error: 'No se pudo procesar esta imagen.',
+            error: friendlyError(err instanceof Error ? err.message : ''),
           });
         });
     }
@@ -83,6 +97,7 @@ export function useCompressor() {
     rejected,
     addFiles,
     changeLevel,
+    retryJob: (id: string) => dispatch({ type: 'retry', id }),
     removeJob: (id: string) => dispatch({ type: 'remove', id }),
     clear: () => dispatch({ type: 'clear' }),
     dismissRejected: () => setRejected([]),

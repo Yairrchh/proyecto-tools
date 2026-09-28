@@ -11,7 +11,7 @@ import { QualitySelector } from './QualitySelector';
 import { ResultRow } from './ResultRow';
 
 export function ImageCompressor() {
-  const { jobs, level, rejected, addFiles, changeLevel, removeJob, clear, dismissRejected } = useCompressor();
+  const { jobs, level, rejected, addFiles, changeLevel, retryJob, removeJob, clear, dismissRejected } = useCompressor();
 
   const names = useMemo(() => {
     const taken = new Set<string>();
@@ -45,7 +45,7 @@ export function ImageCompressor() {
         <>
           <ul className="flex flex-col gap-2">
             {jobs.map((job) => (
-              <ResultRow key={job.id} job={job} outputName={names.get(job.id)!} onRemove={() => removeJob(job.id)} />
+              <ResultRow key={job.id} job={job} outputName={names.get(job.id)!} onRetry={() => retryJob(job.id)} onRemove={() => removeJob(job.id)} />
             ))}
           </ul>
 

@@ -55,6 +55,17 @@ describe('jobsReducer', () => {
     expect(state[0]).toMatchObject({ status: 'done', compressedSize: 200 });
   });
 
+  it('retry reencola solo un trabajo con error y sube su intento', () => {
+    let state = jobsReducer([], { type: 'add', jobs: [makeJob('a'), makeJob('b')] });
+    state = jobsReducer(state, { type: 'fail', id: 'a', attempt: 0, error: 'roto' });
+    state = jobsReducer(state, { type: 'done', id: 'b', attempt: 0, blob: blobOf(300), keptOriginal: false });
+    state = jobsReducer(state, { type: 'retry', id: 'a' });
+    expect(state[0]).toMatchObject({ status: 'queued', attempt: 1 });
+    expect(state[0].error).toBeUndefined();
+    state = jobsReducer(state, { type: 'retry', id: 'b' });
+    expect(state[1]).toMatchObject({ status: 'done', attempt: 0 });
+  });
+
   it('elimina y limpia', () => {
     let state = jobsReducer([], { type: 'add', jobs: [makeJob('a'), makeJob('b')] });
     state = jobsReducer(state, { type: 'remove', id: 'a' });

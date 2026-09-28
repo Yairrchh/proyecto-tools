@@ -1,5 +1,7 @@
+import { ANIMATED_WEBP } from './errors';
 import { QUALITY_LEVELS } from './quality';
 import type { ImageFormat, QualityLevel } from './types';
+import { isAnimatedWebp } from './webp';
 
 async function toImageData(buffer: ArrayBuffer, mime: string): Promise<ImageData> {
   const bitmap = await createImageBitmap(new Blob([buffer], { type: mime }));
@@ -23,6 +25,8 @@ export async function compressBuffer(
     const { optimise } = await import('@jsquash/oxipng');
     return optimise(buffer, { level: preset.pngLevel });
   }
+
+  if (format === 'webp' && isAnimatedWebp(buffer)) throw new Error(ANIMATED_WEBP);
 
   const imageData = await toImageData(buffer, mime);
   if (format === 'jpeg') {

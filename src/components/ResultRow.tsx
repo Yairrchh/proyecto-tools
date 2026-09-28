@@ -9,10 +9,12 @@ import { savingsPercent } from '@/lib/savings';
 export function ResultRow({
   job,
   outputName,
+  onRetry,
   onRemove,
 }: {
   job: Job;
   outputName: string;
+  onRetry: () => void;
   onRemove: () => void;
 }) {
   const [thumb, setThumb] = useState<string>();
@@ -80,6 +82,15 @@ export function ResultRow({
           className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           Descargar
+        </button>
+      )}
+      {job.status === 'error' && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+        >
+          Reintentar
         </button>
       )}
       <button

@@ -105,3 +105,31 @@ test('no hay scroll horizontal', async ({ page }) => {
   const overflows = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(overflows).toBe(false);
 });
+
+test('un WebP animado no se convierte en imagen fija: se avisa', async ({ page }) => {
+  await page.goto('/');
+  // Cabecera mínima RIFF/WEBP/VP8X con la bandera de animación activada.
+  const bytes = Buffer.alloc(64);
+  bytes.write('RIFF', 0);
+  bytes.write('WEBP', 8);
+  bytes.write('VP8X', 12);
+  bytes[20] = 0x02;
+  await page.getByTestId('file-input').setInputFiles({ name: 'sticker.webp', mimeType: 'image/webp', buffer: bytes });
+
+  const row = rows(page).first();
+  await expect(row).toHaveAttribute('data-status', 'error', { timeout: 30_000 });
+  await expect(row).toContainText('animado');
+});
+
+test('una imagen con error se puede reintentar', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('file-input').setInputFiles(fixture('broken.jpg'));
+  const row = rows(page).first();
+  await expect(row).toHaveAttribute('data-status', 'error', { timeout: 30_000 });
+
+  await row.getByRole('button', { name: 'Reintentar' }).click();
+
+  // Sigue siendo un archivo roto, así que vuelve a fallar: lo importante es que se reintentó y la fila no se rompe.
+  await expect(row).toHaveAttribute('data-status', 'error', { timeout: 30_000 });
+  await expect(row.getByRole('button', { name: 'Reintentar' })).toBeVisible();
+});
