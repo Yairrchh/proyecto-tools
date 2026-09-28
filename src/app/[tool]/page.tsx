@@ -4,8 +4,6 @@ import { ToolContent } from '@/components/ToolContent';
 import { ToolPage } from '@/components/ToolPage';
 import { FORMAT_TOOLS, getToolBySlug } from '@/lib/tools';
 
-export const dynamicParams = false;
-
 export function generateStaticParams() {
   return FORMAT_TOOLS.map((t) => ({ tool: t.slug }));
 }
